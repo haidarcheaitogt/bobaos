@@ -409,6 +409,39 @@ class ObjectServerProtocol {
       };
     }
   }
+  
+  static _GetDescriptionStringRes(data) {
+    const serviceName = "GetDescriptionString.Res";
+    let service = this._findServiceByName(serviceName);
+    if (data.length < 5) {
+      throw new RangeError(`${serviceName}: data length expeted to be > 5 but got ${data.length}`);
+    }
+    let start = data.readUInt16BE(0);
+    let number = data.readUInt16BE(2);
+    if (number !== 0) {
+      let payloadPart = data.slice(4);
+      let payload = this._processDescriptionStringPayload(payloadPart);
+      return {
+        service: serviceName,
+        direction: service.direction,
+        error: false,
+        start: start,
+        number: number,
+        payload: payload
+      };
+    } else {
+      let errorCode = data.readUInt8(4);
+      let error = this._findErrorByCode(errorCode);
+      return {
+        service: serviceName,
+        direction: service.direction,
+        error: true,
+        start: start,
+        number: number,
+        payload: error
+      };
+    }
+  }
 
   static _DatapointValueInd(data) {
     const serviceName = "DatapointValue.Ind";
@@ -525,6 +558,41 @@ class ObjectServerProtocol {
   }
 
   static _processDatapointDescriptionPayload(data) {
+    let payload = [];
+    let i = 0;
+    const findDptType = code => {
+      const dptTypes = [
+        { code: 0, dpt: "disabled" },
+        { code: 1, dpt: "dpt1" },
+        { code: 2, dpt: "dpt2" },
+        { code: 3, dpt: "dpt3" },
+        { code: 4, dpt: "dpt4" },
+        { code: 5, dpt: "dpt5" },
+        { code: 6, dpt: "dpt6" },
+        { code: 7, dpt: "dpt7" },
+        { code: 8, dpt: "dpt8" },
+        { code: 9, dpt: "dpt9" },
+        { code: 10, dpt: "dpt10" },
+        { code: 11, dpt: "dpt11" },
+        { code: 12, dpt: "dpt12" },
+        { code: 13, dpt: "dpt13" },
+        { code: 14, dpt: "dpt14" },
+        { code: 15, dpt: "dpt15" },
+        { code: 16, dpt: "dpt16" },
+        { code: 17, dpt: "dpt17" },
+        { code: 18, dpt: "dpt18" },
+        { code: 255, dpt: "unknown" }
+      ];
+      const findByCode = t => t.code === code;
+      let dptType = dptTypes.find(findByCode);
+      if (dptType !== null && typeof dptType === "object") {
+        return dptType.dpt;
+      } else {
+        return "unknown";
+      }
+    };
+    
+    static _processDescriptionStringPayload(data) {
     let payload = [];
     let i = 0;
     const findDptType = code => {
@@ -746,6 +814,8 @@ class ObjectServerProtocol {
             switch (service.name) {
               case "GetDatapointDescription.Res":
                 return this._GetDatapointDescriptionRes(dataPart);
+              case "GetDescriptionString.Res":
+                return this._GetDescriptionStringRes(dataPart);
               case "GetServerItem.Res":
                 return this._GetServerItemRes(dataPart);
               case "SetServerItem.Res":
