@@ -103,6 +103,36 @@ class ObjectServerProtocol {
       throw new TypeError("Please specify parameters as object {start: Int, number: Int}");
     }
   }
+  
+  static GetDescriptionStringReq(params) {
+    if (params !== null && typeof params === "object") {
+      if (!Object.prototype.hasOwnProperty.call(params, "start")) {
+        throw new Error("Please specify datapoint start number");
+      }
+      let start = params.start;
+      let number = 1;
+      if (Object.prototype.hasOwnProperty.call(params, "number")) {
+        number = params.number;
+      }
+      const serviceName = "GetDescriptionString.Req";
+      // const findServiceByName = service => service.name === serviceName;
+      // let service = Services.find(findServiceByName);
+      let service = this._findServiceByName(serviceName);
+      if (service !== null && typeof service === "object") {
+        let main = service.main;
+        let sub = service.sub;
+        let servicePart = Buffer.from([main, sub]);
+        let dpPart = Buffer.alloc(4);
+        dpPart.writeUInt16BE(start, 0);
+        dpPart.writeUInt16BE(number, 2);
+        return Buffer.concat([servicePart, dpPart]);
+      } else {
+        throw new RangeError(`Service ${serviceName} not found`);
+      }
+    } else {
+      throw new TypeError("Please specify parameters as object {start: Int, number: Int}");
+    }
+  }
 
   static GetServerItemReq(params) {
     if (params !== null && typeof params === "object") {
