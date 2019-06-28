@@ -556,43 +556,8 @@ class ObjectServerProtocol {
       };
     }
   }
-
+  
   static _processDatapointDescriptionPayload(data) {
-    let payload = [];
-    let i = 0;
-    const findDptType = code => {
-      const dptTypes = [
-        { code: 0, dpt: "disabled" },
-        { code: 1, dpt: "dpt1" },
-        { code: 2, dpt: "dpt2" },
-        { code: 3, dpt: "dpt3" },
-        { code: 4, dpt: "dpt4" },
-        { code: 5, dpt: "dpt5" },
-        { code: 6, dpt: "dpt6" },
-        { code: 7, dpt: "dpt7" },
-        { code: 8, dpt: "dpt8" },
-        { code: 9, dpt: "dpt9" },
-        { code: 10, dpt: "dpt10" },
-        { code: 11, dpt: "dpt11" },
-        { code: 12, dpt: "dpt12" },
-        { code: 13, dpt: "dpt13" },
-        { code: 14, dpt: "dpt14" },
-        { code: 15, dpt: "dpt15" },
-        { code: 16, dpt: "dpt16" },
-        { code: 17, dpt: "dpt17" },
-        { code: 18, dpt: "dpt18" },
-        { code: 255, dpt: "unknown" }
-      ];
-      const findByCode = t => t.code === code;
-      let dptType = dptTypes.find(findByCode);
-      if (dptType !== null && typeof dptType === "object") {
-        return dptType.dpt;
-      } else {
-        return "unknown";
-      }
-    };
-    
-    static _processDescriptionStringPayload(data) {
     let payload = [];
     let i = 0;
     const findDptType = code => {
@@ -692,7 +657,108 @@ class ObjectServerProtocol {
     }
     return payload;
   }
-
+  
+  static _processDescriptionStringPayload(data) {
+    let payload = [];
+    let i = 0;
+    const findDptType = code => {
+      const dptTypes = [
+        { code: 0, dpt: "disabled" },
+        { code: 1, dpt: "dpt1" },
+        { code: 2, dpt: "dpt2" },
+        { code: 3, dpt: "dpt3" },
+        { code: 4, dpt: "dpt4" },
+        { code: 5, dpt: "dpt5" },
+        { code: 6, dpt: "dpt6" },
+        { code: 7, dpt: "dpt7" },
+        { code: 8, dpt: "dpt8" },
+        { code: 9, dpt: "dpt9" },
+        { code: 10, dpt: "dpt10" },
+        { code: 11, dpt: "dpt11" },
+        { code: 12, dpt: "dpt12" },
+        { code: 13, dpt: "dpt13" },
+        { code: 14, dpt: "dpt14" },
+        { code: 15, dpt: "dpt15" },
+        { code: 16, dpt: "dpt16" },
+        { code: 17, dpt: "dpt17" },
+        { code: 18, dpt: "dpt18" },
+        { code: 255, dpt: "unknown" }
+      ];
+      const findByCode = t => t.code === code;
+      let dptType = dptTypes.find(findByCode);
+      if (dptType !== null && typeof dptType === "object") {
+        return dptType.dpt;
+      } else {
+        return "unknown";
+      }
+    };
+    const findValueType = code => {
+      const valueTypes = [
+        { code: 0, length: 1 },
+        { code: 1, length: 1 },
+        { code: 2, length: 1 },
+        { code: 3, length: 1 },
+        { code: 4, length: 1 },
+        { code: 5, length: 1 },
+        { code: 6, length: 1 },
+        { code: 7, length: 1 },
+        { code: 8, length: 2 },
+        { code: 9, length: 3 },
+        { code: 10, length: 4 },
+        { code: 11, length: 6 },
+        { code: 12, length: 8 },
+        { code: 13, length: 10 },
+        { code: 14, length: 14 }
+      ];
+      const findByCode = t => t.code === code;
+      let valueType = valueTypes.find(findByCode);
+      if (valueType !== null && typeof valueType === "object") {
+        return valueType.length;
+      } else {
+        return "unknown";
+      }
+    };
+    const processConfigFlags = code => {
+      const transmitPriorityTable = [
+        { code: 0, value: "system" },
+        { code: 1, value: "high" },
+        { code: 2, value: "alarm" },
+        { code: 3, value: "low" }
+      ];
+      const transmitPriorityCode = code & 0x03;
+      const transmitPriorityValue = transmitPriorityTable.find(t => t.code === transmitPriorityCode).value;
+      const datapointCommunication = !!(code & 0x04);
+      const read = !!(code & 0x08);
+      const write = !!(code & 0x10);
+      const readOnInit = !!(code & 0x20);
+      const transmitToBus = !!(code & 0x40);
+      const updateOnResponse = !!(code & 0x80);
+      return {
+        priority: transmitPriorityValue,
+        communication: datapointCommunication,
+        read: read,
+        write: write,
+        readOnInit: readOnInit,
+        transmit: transmitToBus,
+        update: updateOnResponse
+      };
+    };
+    while (i < data.length - 4) {
+      let id = data.readUInt16BE(i);
+      let valueTypeByte = data.readUInt8(i + 2);
+      let configFlagsByte = data.readUInt8(i + 3);
+      let dptCode = data.readUInt8(i + 4);
+      i += 5;
+      payload.push({
+        id: id,
+        length: findValueType(valueTypeByte),
+        flags: processConfigFlags(configFlagsByte),
+        dpt: findDptType(dptCode)
+      });
+    }
+    return payload;
+  }
+  
   static _GetDatapointDescriptionRes(data) {
     const serviceName = "GetDatapointDescription.Res";
     let service = this._findServiceByName(serviceName);
